@@ -24,7 +24,7 @@ Then add the following shortcode to your page:
 
 You can also put in multiple prices to generate a dropdown list for your customers to choose from:
 
-> [freezy_strip name="My Donation" price="5,10,15,20,25,50,100"]
+> [freezy_stripe name="My Donation" price="5,10,15,20,25,50,100"]
 
 == Frequently Asked Questions ==
 
