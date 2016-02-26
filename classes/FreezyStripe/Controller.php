@@ -24,7 +24,9 @@ class Controller {
 	 */
 	public function init()
 	{
-
+		wp_enqueue_script( 'freezy-stripe-stripe-js', 'https://checkout.stripe.com/checkout.js', array( 'jquery' ), (WP_DEBUG) ? time() : self::VERSION_JS, FALSE );
+		wp_enqueue_script( 'freezy-stripe-js', plugin_dir_url( dirname( __DIR__ )  ) . 'js/freezy-stripe.js', array( 'jquery' ), (WP_DEBUG) ? time() : self::VERSION_JS, TRUE );
+		wp_enqueue_style( 'freezy-stripe-css', plugin_dir_url( dirname( __DIR__ ) ) . 'css/freezy-stripe.css', array(), (WP_DEBUG) ? time() : self::VERSION_CSS );
 	}
 
 	/**
@@ -35,7 +37,8 @@ class Controller {
 	public function short_code( $attributes )
 	{
 		$this->attributes = shortcode_atts( array(
-			'key' => 'default_val'
+			'name' => '',
+			'price' => ''
 		), $attributes );
 
 		ob_start();
@@ -135,5 +138,68 @@ class Controller {
 			'SEK' => 'Swedish Krona',
 			'USD' => 'United States Dollar'
 		);
+	}
+
+	/**
+	 * @return array
+	 */
+	public static function getStripeKeys()
+	{
+		$mode = ( get_option('freezy_stripe_mode') == 'live' ) ? 'live' : 'test';
+
+		return array(
+			'secret' => get_option( 'freezy_stripe_'.$mode.'_secret_key' ),
+			'pub' => get_option( 'freezy_stripe_'.$mode.'_pub_key' )
+		);
+	}
+
+	/**
+	 *
+	 */
+	public function form_capture()
+	{
+		if ( isset( $_POST['freezy_stripe_action'] ) )
+		{
+			if ( wp_verify_nonce( $_POST['_wpnonce'], 'freezy-stripe-nonce' ) )
+			{
+				if ( $_POST['freezy_stripe_action'] == 'charge' )
+				{
+					$stripe_keys = self::getStripeKeys();
+					Stripe\Stripe::setApiKey( $stripe_keys['secret'] );
+
+					try
+					{
+						/** @var \Stripe\Charge $charge */
+						Stripe\Charge::create( array(
+							'amount' => round( $_POST['price'] ),
+							'currency' => 'usd',
+							'source' => $_POST['token'],
+							'description' => $_POST['description']
+						) );
+
+						$referrer = $_POST['_wp_http_referer'];
+						$parts = explode( '?', $referrer );
+						$page = $parts[0];
+						if ( count( $parts ) > 1 )
+						{
+							unset( $parts[0] );
+							$qs = $parts;
+						}
+						else
+						{
+							$qs = array();
+						}
+						$qs[] = 'freezy=success';
+
+						header( 'Location:' . $page . '?' . implode( '&', $qs ) );
+						exit;
+					}
+					catch ( \Exception $e )
+					{
+						// card was declined
+					}
+				}
+			}
+		}
 	}
 }

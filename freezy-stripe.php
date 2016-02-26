@@ -27,6 +27,7 @@
  */
 
 require_once ( 'classes/FreezyStripe/Controller.php' );
+require_once ( 'classes/Stripe/init.php' );
 
 /* controller object */
 $controller = new \FreezyStripe\Controller;
@@ -37,8 +38,12 @@ register_activation_hook( __FILE__, array( $controller, 'activate' ) );
 /* enqueue js and css */
 add_action( 'init', array( $controller, 'init' ) );
 
+/* capture form post */
+add_action ( 'init', array( $controller, 'form_capture' ) );
+
 /* register shortcode */
 add_shortcode ( 'freezy_stripe', array( $controller, 'short_code' ) );
+
 
 /* admin stuff */
 if (is_admin() )
