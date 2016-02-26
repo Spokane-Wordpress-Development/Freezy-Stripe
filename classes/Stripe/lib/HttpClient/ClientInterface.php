@@ -1,6 +1,6 @@
 <?php
 
-namespace Stripe\HttpClient;
+namespace FreezyStripe\Stripe\HttpClient;
 
 interface ClientInterface
 {

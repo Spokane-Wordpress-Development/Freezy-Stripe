@@ -1,6 +1,6 @@
 <?php
 
-namespace Stripe\Error;
+namespace FreezyStripe\Stripe\Error;
 
 class ApiConnection extends Base
 {
