@@ -1,6 +1,6 @@
 <?php
 
-namespace Stripe;
+namespace FreezyStripe\Stripe;
 
 // e.g. metadata on Stripe objects.
 class AttachedObject extends StripeObject

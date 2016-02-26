@@ -1,6 +1,6 @@
 <?php
 
-namespace Stripe;
+namespace FreezyStripe\Stripe;
 
 class Event extends ApiResource
 {

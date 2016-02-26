@@ -1,6 +1,6 @@
 <?php
 
-namespace Stripe;
+namespace FreezyStripe\Stripe;
 
 abstract class SingletonApiResource extends ApiResource
 {

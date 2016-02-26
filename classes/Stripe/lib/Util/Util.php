@@ -1,6 +1,6 @@
 <?php
 
-namespace Stripe\Util;
+namespace FreezyStripe\Stripe\Util;
 
 use Stripe\StripeObject;
 
