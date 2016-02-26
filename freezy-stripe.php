@@ -46,6 +46,9 @@ if (is_admin() )
 	/* register settings */
 	add_action( 'admin_init', array( $controller, 'register_settings' ) );
 
+	/* admin scripts */
+	add_action( 'admin_init', array( $controller, 'admin_scripts' ) );
+
 	/* add the instructions page link */
 	add_filter( 'plugin_action_links_' . plugin_basename( __FILE__ ), array( $controller, 'instructions_link' ) );
 

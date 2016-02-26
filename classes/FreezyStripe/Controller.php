@@ -97,8 +97,43 @@ class Controller {
 	/**
 	 *
 	 */
+	public function admin_scripts()
+	{
+		wp_enqueue_media();
+		wp_enqueue_script( 'freezy-stripe-admin-js', plugin_dir_url( dirname( __DIR__ )  ) . 'js/admin.js', array( 'jquery' ), (WP_DEBUG) ? time() : self::VERSION_JS, TRUE );
+		wp_enqueue_style( 'freezy-strip-admin-css', plugin_dir_url( dirname( __DIR__ ) ) . 'css/admin.css', array(), (WP_DEBUG) ? time() : self::VERSION_CSS );
+	}
+
+	/**
+	 *
+	 */
 	public function register_settings()
 	{
-		register_setting( 'freezy_stripe_settings', 'freezy_stripe_setting_name' );
+		register_setting( 'freezy_stripe_settings', 'freezy_stripe_test_secret_key' );
+		register_setting( 'freezy_stripe_settings', 'freezy_stripe_test_pub_key' );
+		register_setting( 'freezy_stripe_settings', 'freezy_stripe_live_secret_key' );
+		register_setting( 'freezy_stripe_settings', 'freezy_stripe_live_pub_key' );
+		register_setting( 'freezy_stripe_settings', 'freezy_stripe_mode' );
+		register_setting( 'freezy_stripe_settings', 'freezy_stripe_currency' );
+		register_setting( 'freezy_stripe_settings', 'freezy_stripe_company_name' );
+		register_setting( 'freezy_stripe_settings', 'freezy_stripe_suppress_https_warning' );
+		register_setting( 'freezy_stripe_settings', 'freezy_stripe_company_logo' );
+	}
+
+	/**
+	 * @return array
+	 */
+	public function get_currencies()
+	{
+		return array(
+			'AUD' => 'Australian Dollar',
+			'CAD' => 'Canadian Dollar',
+			'DKK' => 'Danish Krone',
+			'EUR' => 'Euro',
+			'GBP' => 'British Pound',
+			'NOK' => 'Norwegian Krone',
+			'SEK' => 'Swedish Krona',
+			'USD' => 'United States Dollar'
+		);
 	}
 }
