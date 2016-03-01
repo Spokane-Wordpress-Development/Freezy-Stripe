@@ -24,6 +24,7 @@ class Controller {
 	 */
 	public function init()
 	{
+		add_thickbox();
 		wp_enqueue_script( 'freezy-stripe-stripe-js', 'https://checkout.stripe.com/checkout.js', array( 'jquery' ), (WP_DEBUG) ? time() : self::VERSION_JS, FALSE );
 		wp_enqueue_script( 'freezy-stripe-js', plugin_dir_url( dirname( __DIR__ )  ) . 'js/freezy-stripe.js', array( 'jquery' ), (WP_DEBUG) ? time() : self::VERSION_JS, TRUE );
 		wp_enqueue_style( 'freezy-stripe-css', plugin_dir_url( dirname( __DIR__ ) ) . 'css/freezy-stripe.css', array(), (WP_DEBUG) ? time() : self::VERSION_CSS );
@@ -169,6 +170,14 @@ class Controller {
 
 					try
 					{
+						$token = Stripe\Token::retrieve( $_POST['token'] );
+						$email =  $token->email;
+						$address = $token->card->address_line1;
+						$city = $token->card->address_city;
+						$state =  $token->card->address_state;
+						$zip =  $token->card->address_zip;
+						$name = $token->card->name;
+
 						/** @var \Stripe\Charge $charge */
 						Stripe\Charge::create( array(
 							'amount' => round( $_POST['price'] ),
@@ -176,6 +185,22 @@ class Controller {
 							'source' => $_POST['token'],
 							'description' => $_POST['description']
 						) );
+
+						$post_id = wp_insert_post(
+							array(
+								'post_title' => $name,
+								'post_status' => 'publish',
+								'post_type' => 'freezy_payment'
+							)
+						);
+
+						update_post_meta( $post_id, 'payment_for', $_POST['description'] );
+						update_post_meta( $post_id, 'price', $_POST['price']/100 );
+						update_post_meta( $post_id, 'email', $email );
+						update_post_meta( $post_id, 'address', $address );
+						update_post_meta( $post_id, 'city', $city );
+						update_post_meta( $post_id, 'state', $state );
+						update_post_meta( $post_id, 'zip', $zip );
 
 						$referrer = $_POST['_wp_http_referer'];
 						$parts = explode( '?', $referrer );
@@ -189,7 +214,10 @@ class Controller {
 						{
 							$qs = array();
 						}
-						$qs[] = 'freezy=success';
+						if ( ! in_array( 'freezy=success', $qs ) )
+						{
+							$qs[] = 'freezy=success';
+						}
 
 						header( 'Location:' . $page . '?' . implode( '&', $qs ) );
 						exit;
@@ -200,6 +228,151 @@ class Controller {
 					}
 				}
 			}
+		}
+	}
+
+	/**
+	 *
+	 */
+	public function create_post_type()
+	{
+		$title = __( 'Freezy Payment', 'freezy-stripe' );
+		$plural = __( 'Freezy Payments', 'freezy-stripe' );
+
+		$labels = array (
+			'name' => $plural,
+			'singular_name' => $plural,
+			'add_new_item' => __( 'Add New', 'freezy-stripe' ) . ' ' . $title,
+			'edit_item' => __( 'Edit', 'freezy-stripe' ) . ' ' . $title,
+			'new_item' => __( 'New', 'freezy-stripe' ) . ' ' . $title,
+			'view_item' => __( 'View', 'freezy-stripe' ) . ' ' . $title,
+			'search_items' => __( 'Search', 'freezy-stripe' ) . ' ' . $plural,
+			'not_found' => __( 'No', 'freezy-stripe' ) . ' ' . $plural . ' ' . __( 'Found', 'freezy-stripe'  )
+		);
+
+		$args = array (
+			'labels' => $labels,
+			'hierarchical' => FALSE,
+			'description' => $plural,
+			'supports' => array( 'title' ),
+			'show_ui' => TRUE,
+			'show_in_menu' => 'freezy_stripe',
+			'show_in_nav_menus' => TRUE,
+			'publicly_queryable' => TRUE,
+			'exclude_from_search' => FALSE,
+			'has_archive' => TRUE
+		);
+
+		register_post_type( 'freezy_payment' , $args );
+	}
+
+	/**
+	 *
+	 */
+	public function admin_menus()
+	{
+		add_menu_page( 'Freezy Stripe', 'Freezy Stripe', 'manage_options', 'freezy_stripe', array( $this, 'print_instructions_page' ), 'dashicons-cart' );
+		add_submenu_page( 'freezy_stripe', __( 'Settings', 'freezy-stripe' ), __( 'Settings', 'freezy-stripe' ), 'manage_options', 'freezy_stripe' );
+	}
+
+	/**
+	 * @param $input
+	 *
+	 * @return string|void
+	 */
+	public function custom_enter_title( $input )
+	{
+		global $post_type;
+
+		if ( $post_type == 'freezy_payment' )
+		{
+			return __( 'Enter Customer Name', 'freezy-stripe' );
+		}
+
+		return $input;
+	}
+
+	/**
+	 *
+	 */
+	public function custom_meta()
+	{
+		add_meta_box( 'freezy-payment-meta', __( 'Additional Info', 'freezy-stripe' ), array( $this, 'meta_box' ), 'freezy_payment' );
+	}
+
+	/**
+	 *
+	 */
+	public function meta_box()
+	{
+		include ( dirname( dirname( __DIR__ ) ) . '/includes/meta.php' );
+	}
+
+	/**
+	 * @param $post_id
+	 * @param $post
+	 */
+	public function save_meta( $post_id, $post )
+	{
+		if ( $post->post_type == 'freezy_payment' )
+		{
+			$payment_for = ( isset( $_REQUEST['freezy_payment_for'] ) ) ? trim( $_REQUEST['freezy_payment_for'] ) : '';
+			$price = ( isset( $_REQUEST['freezy_price'] ) ) ? preg_replace( '/[^0-9\.]/', '', $_REQUEST['freezy_price'] ) : 0;
+			if ( strlen( $price ) == 0 )
+			{
+				$price = 0;
+			}
+			$email = ( isset( $_REQUEST['freezy_email'] ) ) ? trim( $_REQUEST['freezy_email'] ) : '';
+			$address = ( isset( $_REQUEST['freezy_address'] ) ) ? trim( $_REQUEST['freezy_address'] ) : '';
+			$city = ( isset( $_REQUEST['freezy_city'] ) ) ? trim( $_REQUEST['freezy_city'] ) : '';
+			$state = ( isset( $_REQUEST['freezy_state'] ) ) ? trim( $_REQUEST['freezy_state'] ) : '';
+			$zip = ( isset( $_REQUEST['freezy_zip'] ) ) ? trim( $_REQUEST['freezy_zip'] ) : '';
+
+			update_post_meta( $post_id, 'payment_for', $payment_for );
+			update_post_meta( $post_id, 'price', $price );
+			update_post_meta( $post_id, 'email', $email );
+			update_post_meta( $post_id, 'address', $address );
+			update_post_meta( $post_id, 'city', $city );
+			update_post_meta( $post_id, 'state', $state );
+			update_post_meta( $post_id, 'zip', $zip );
+		}
+	}
+
+	/**
+	 * @param $columns
+	 *
+	 * @return array
+	 */
+	public function add_columns( $columns )
+	{
+		$new = array(
+			'payment_for' => __( 'Product or Service', 'freezy-stripe' ),
+			'price' => __( 'Price', 'freezy-stripe' )
+		);
+		$columns = array_slice( $columns, 0, 2, TRUE ) + $new + array_slice( $columns, 2, NULL, TRUE );
+		$columns['title'] = __( 'Customer', 'freezy-stripe' );
+
+
+		return $columns;
+	}
+
+	/**
+	 * @param $column
+	 */
+	public function custom_columns( $column )
+	{
+		$post = $GLOBALS['post'];
+		$custom = get_post_custom( $post->ID );
+		$payment_for = ( array_key_exists( 'payment_for', $custom ) ) ? $custom[ 'payment_for' ][0] : '';
+		$price = ( array_key_exists( 'price', $custom ) ) ? $custom[ 'price' ][0] : 0;
+
+		if ( $column == 'payment_for' )
+		{
+			echo $payment_for;
+		}
+		elseif ( $column == 'price' )
+		{
+			echo $price;
 		}
 	}
 }

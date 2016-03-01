@@ -34,9 +34,12 @@ foreach ($prices as $index => $price)
 
 <?php if ( isset( $_POST['freezy_stripe_action'] ) && ! isset( $freezy_stripe_error_posted ) ) { ?>
 
-	<div class="freezy-stripe-error alert alert-danger">
-		<?php _e( 'There was a problem charging your credit card.', 'freezy-stripe' ); ?>
+	<div class="freezy-stripe-alert" id="freezy-stripe-error-<?php echo $id; ?>" data-id="freezy-a-error-<?php echo $id; ?>" style="display:none">
+		<div class="alert alert-danger">
+			<?php _e( 'There was a problem charging your credit card.', 'freezy-stripe' ); ?>
+		</div>
 	</div>
+	<a href="#TB_inline?width=600&height=550&inlineId=freezy-stripe-error-<?php echo $id; ?>" id="freezy-a-error-<?php echo $id; ?>" class="thickbox"></a>
 
 	<?php $freezy_stripe_error_posted = TRUE; ?>
 
@@ -44,9 +47,12 @@ foreach ($prices as $index => $price)
 
 <?php if ( ! isset( $_POST['freezy_stripe_action'] ) && isset( $_GET['freezy'] ) && $_GET['freezy'] == 'success' && ! isset( $freezy_stripe_success_posted ) ) { ?>
 
-	<div class="freezy-stripe-success alert alert-success">
-		<?php _e( 'Success! Your card was charged.', 'freezy-stripe' ); ?>
+	<div class="freezy-stripe-alert" id="freezy-stripe-success-<?php echo $id; ?>" data-id="freezy-a-success-<?php echo $id; ?>" style="display:none">
+		<div class="alert alert-success">
+			<?php _e( 'Success! Your card was charged.', 'freezy-stripe' ); ?>
+		</div>
 	</div>
+	<a href="#TB_inline?width=300&height=200&inlineId=freezy-stripe-success-<?php echo $id; ?>" id="freezy-a-success-<?php echo $id; ?>" class="thickbox"></a>
 
 	<?php $freezy_stripe_success_posted = TRUE; ?>
 
@@ -55,6 +61,10 @@ foreach ($prices as $index => $price)
 <?php if ( strlen( $stripe_keys['pub'] ) > 0 && strlen( $stripe_keys['secret'] ) > 0 && count( $prices ) > 0 ) { ?>
 
 	<script>
+
+		if (typeof freezy_stripe_handlers === 'undefined') {
+			var freezy_stripe_handlers = [];
+		}
 
 		var freezy_stripe_handler = StripeCheckout.configure({
 			key: '<?php echo $stripe_keys['pub']; ?>',
@@ -68,9 +78,16 @@ foreach ($prices as $index => $price)
 			}
 		});
 
+		freezy_stripe_handlers.push({
+			id: '<?php echo $id; ?>',
+			handler: freezy_stripe_handler
+		});
+
 		// Close Checkout on page navigation
 		jQuery(window).on('popstate', function() {
-			freezy_stripe_handler.close();
+			for (var h=0; h<freezy_stripe_handlers.length; h++) {
+				freezy_stripe_handlers[h].handler.close();
+			}
 		});
 
 	</script>
